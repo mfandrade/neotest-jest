@@ -63,15 +63,25 @@ function adapter.build_position(file_path, source, captured_nodes)
   local name = vim.treesitter.get_node_text(captured_nodes[match_type .. ".name"], source)
   local definition = captured_nodes[match_type .. ".definition"]
 
+  -- Get the ancestors (suítes)
+  local ancestors = {}
+  if captured_nodes["namespace.name"] then
+    table.insert(ancestors, vim.treesitter.get_node_text(captured_nodes["namespace.name"], source))
+  end
+  if captured_nodes["describe.name"] then
+    table.insert(ancestors, vim.treesitter.get_node_text(captured_nodes["describe.name"], source))
+  end
+
+  local full_name = table.concat(ancestors, " ") .. " " .. name
+
   return {
     type = match_type,
     path = file_path,
-    name = name,
+    name = full_name,
     range = { definition:range() },
     is_parameterized = captured_nodes["each_property"] and true or false,
   }
 end
-
 ---@async
 ---@return neotest.Tree | nil
 function adapter.discover_positions(path)

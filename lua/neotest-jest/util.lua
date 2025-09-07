@@ -256,8 +256,6 @@ function M.escapeTestPattern(s)
       :gsub("%?", "%\\?")
       :gsub("%$", "%\\$")
       :gsub("%^", "%\\^")
-      :gsub("%/", "%\\/")
-      :gsub("%'", "%\\'")
   )
 end
 
