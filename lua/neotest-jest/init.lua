@@ -147,7 +147,45 @@ function adapter.discover_positions(path)
 
   local positions = lib.treesitter.parse_positions(path, query, {
     nested_tests = false,
-    build_position = 'require("neotest-jest").build_position',
+    build_position = [[
+function (file_path, source, captured_nodes)
+  local function get_match_type(captured)
+    if captured["test.name"] then
+      return "test"
+    elseif captured["describe.name"] then
+      return "describe"
+    elseif captured["namespace.name"] then
+      return "namespace"
+    end
+  end
+
+  local match_type = get_match_type(captured_nodes)
+  if not match_type then return end
+
+  local name = vim.treesitter.get_node_text(captured_nodes[match_type .. ".name"], source)
+  local definition = captured_nodes[match_type .. ".definition"]
+
+  -- Get the ancestors
+  local ancestors = {}
+  if captured_nodes["namespace.name"] then
+    table.insert(ancestors, vim.treesitter.get_node_text(captured_nodes["namespace.name"], source))
+  end
+  if captured_nodes["describe.name"] then
+    table.insert(ancestors, vim.treesitter.get_node_text(captured_nodes["describe.name"], source))
+  end
+
+  -- Só concatena ancestors se for um teste
+  local full_name = match_type == "test" and (#ancestors > 0 and table.concat(ancestors, " ") .. " " .. name or name) or name
+
+  return {
+    type = match_type,
+    path = file_path,
+    name = full_name,
+    range = { definition:range() },
+    is_parameterized = captured_nodes["each_property"] and true or false,
+  }
+end
+]],
   })
 
   local parameterized_tests_positions =
